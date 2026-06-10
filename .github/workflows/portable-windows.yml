@@ -7,28 +7,78 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: subosito/flutter-action@v2
+      
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: stable
-      - uses: dtolnay/rust-toolchain@v1
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: '1.75'
           targets: x86_64-pc-windows-msvc
-      - name: Build portable EXE
+      
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
+      
+      - name: Build RustDesk
         run: |
           python build.py --flutter --portable
-          # Дополнительная упаковка в один EXE
+      
+      - name: Find build output
+        shell: bash
+        run: |
+          echo "Looking for build output..."
+          ls -la flutter/build/windows/x64/runner/Release/ || echo "Not found"
+          ls -la target/release/ || echo "Not found"
+      
+      - name: Create portable EXE
+        shell: bash
+        run: |
+          # Путь к собранным файлам
+          BUILD_DIR="./flutter/build/windows/x64/runner/Release"
+          
+          # Проверяем, что папка существует
+          if [ ! -d "$BUILD_DIR" ]; then
+            echo "ERROR: Build directory not found at $BUILD_DIR"
+            exit 1
+          fi
+          
+          # Собираем портативный EXE
           cd libs/portable
           pip install -r requirements.txt
-          python generate.py -f ../../flutter/build/windows/x64/runner/Release/ -o . -e ../../flutter/build/windows/x64/runner/Release/rustdesk.exe
+          python generate.py -f "../../$BUILD_DIR" -o . -e "../../$BUILD_DIR/rustdesk.exe"
           cd ../..
+          
+          # Создаём выходную папку
           mkdir -p output
-          mv ./target/release/rustdesk-portable-packer.exe ./output/rustdesk-portable.exe
-      - uses: actions/upload-artifact@v4
+          
+          # Копируем результат (если создался)
+          if [ -f "./target/release/rustdesk-portable-packer.exe" ]; then
+            cp ./target/release/rustdesk-portable-packer.exe ./output/rustdesk-portable.exe
+            echo "Portable EXE created at ./output/rustdesk-portable.exe"
+          else
+            echo "rustdesk-portable-packer.exe not found, checking alternative locations..."
+            find ./target -name "*.exe" -type f 2>/dev/null || echo "No exe files found"
+          fi
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: rustdesk-portable
           path: ./output/rustdesk-portable.exe
+      
+      - name: Upload full build (fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-full-build
+          path: ./flutter/build/windows/x64/runner/Release/
