@@ -16,9 +16,8 @@ jobs:
         with:
           vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
       
-      - name: Install vcpkg dependencies (including opus)
+      - name: Install vcpkg dependencies
         run: |
-          $VCPKG_ROOT/vcpkg install opus:x64-windows-static
           $VCPKG_ROOT/vcpkg install --triplet x64-windows-static
         shell: bash
       
@@ -35,8 +34,6 @@ jobs:
           targets: x86_64-pc-windows-msvc
       
       - name: Build RustDesk
-        env:
-          VCPKG_ROOT: C:\vcpkg
         run: python build.py --flutter --portable
       
       - name: Generate portable EXE
@@ -46,7 +43,11 @@ jobs:
           python generate.py -f "../../flutter/build/windows/x64/runner/Release" -o . -e "../../flutter/build/windows/x64/runner/Release/rustdesk.exe"
           cd ../..
           mkdir output
-          cp ./target/release/rustdesk-portable-packer.exe ./output/rustdesk.exe
+          if (Test-Path "./target/release/rustdesk-portable-packer.exe") {
+            Copy-Item "./target/release/rustdesk-portable-packer.exe" "./output/rustdesk.exe"
+          } else {
+            Copy-Item "./flutter/build/windows/x64/runner/Release/rustdesk.exe" "./output/rustdesk.exe"
+          }
       
       - uses: actions/upload-artifact@v4
         with:
