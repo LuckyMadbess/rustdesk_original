@@ -7,79 +7,46 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+      - uses: lukka/run-vcpkg@v11
         with:
           vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
       
-      - name: Install vcpkg dependencies
+      - name: Install vcpkg deps
         run: |
+          $VCPKG_ROOT/vcpkg install opus:x64-windows-static
           $VCPKG_ROOT/vcpkg install --triplet x64-windows-static
         shell: bash
       
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
-          channel: stable
       
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: '1.75'
           targets: x86_64-pc-windows-msvc
       
-      - name: Build RustDesk
+      - name: Build
         env:
           VCPKG_ROOT: C:\vcpkg
-        run: |
-          python build.py --flutter --portable
+        run: python build.py --flutter --portable
       
-      - name: Create portable EXE
+      - name: Pack portable
         shell: bash
         run: |
-          # Проверяем, где находится собранный rustdesk.exe
-          if [ -f "./target/release/rustdesk.exe" ]; then
-            RUSTDESK_EXE="./target/release/rustdesk.exe"
-          elif [ -f "./flutter/build/windows/x64/runner/Release/rustdesk.exe" ]; then
-            RUSTDESK_EXE="./flutter/build/windows/x64/runner/Release/rustdesk.exe"
-          else
-            echo "rustdesk.exe not found!"
-            find . -name "rustdesk.exe" -type f 2>/dev/null || echo "No exe found"
-            exit 1
-          fi
-          
-          echo "Found rustdesk.exe at: $RUSTDESK_EXE"
-          
-          # Определяем директорию с файлами
-          RUSTDESK_DIR=$(dirname "$RUSTDESK_EXE")
-          echo "Files directory: $RUSTDESK_DIR"
-          
-          # Собираем портативный EXE
           cd libs/portable
           pip install -r requirements.txt
-          python generate.py -f "../../$RUSTDESK_DIR" -o . -e "../../$RUSTDESK_EXE"
+          python generate.py -f "../../flutter/build/windows/x64/runner/Release" -o . -e "../../flutter/build/windows/x64/runner/Release/rustdesk.exe"
           cd ../..
-          
-          # Создаём выходную папку
           mkdir -p output
-          
-          # Копируем результат
-          if [ -f "./target/release/rustdesk-portable-packer.exe" ]; then
-            cp ./target/release/rustdesk-portable-packer.exe ./output/rustdesk-portable.exe
-            echo "Success! Portable EXE created at ./output/rustdesk-portable.exe"
-          else
-            echo "Portable packer not found, copying regular build"
-            cp "$RUSTDESK_EXE" ./output/rustdesk.exe
-          fi
+          cp ./target/release/rustdesk-portable-packer.exe ./output/rustdesk-portable.exe 2>/dev/null || echo "Portable not created"
+          cp ./flutter/build/windows/x64/runner/Release/rustdesk.exe ./output/ 2>/dev/null || echo "Regular exe copied"
       
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: rustdesk-portable
+          name: rustdesk-output
           path: ./output/
