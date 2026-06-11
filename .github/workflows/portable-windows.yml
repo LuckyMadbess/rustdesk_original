@@ -1,4 +1,4 @@
-name: Portable Windows Build
+name: Simple Windows Build
 
 on:
   workflow_dispatch:
@@ -11,47 +11,35 @@ jobs:
         with:
           submodules: recursive
       
-      - name: Setup vcpkg
+      - name: Setup vcpkg (classic mode)
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: C:\vcpkg
           vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
+          runVcpkgInstall: false
       
-      - name: Install vcpkg dependencies
+      - name: Install opus manually
         run: |
-          C:\vcpkg\vcpkg install opus:x64-windows-static --recurse
-          C:\vcpkg\vcpkg install --triplet x64-windows-static --recurse
+          C:\vcpkg\vcpkg install opus:x64-windows-static --recurse --classic
+          C:\vcpkg\vcpkg install --triplet x64-windows-static --classic
         shell: cmd
       
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
           channel: stable
       
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: '1.75'
           targets: x86_64-pc-windows-msvc
       
-      - name: Build RustDesk
+      - name: Build
         run: python build.py --flutter --portable
-      
-      - name: Generate portable EXE
-        run: |
-          cd libs/portable
-          pip install -r requirements.txt
-          python generate.py -f "../../flutter/build/windows/x64/runner/Release" -o . -e "../../flutter/build/windows/x64/runner/Release/rustdesk.exe"
-          cd ../..
-          mkdir output
-          if (Test-Path "./target/release/rustdesk-portable-packer.exe") {
-            Copy-Item "./target/release/rustdesk-portable-packer.exe" "./output/rustdesk.exe"
-          } else {
-            Copy-Item "./flutter/build/windows/x64/runner/Release/rustdesk.exe" "./output/rustdesk.exe"
-          }
+        env:
+          VCPKG_ROOT: C:\vcpkg
       
       - uses: actions/upload-artifact@v4
         with:
-          name: rustdesk-portable
-          path: ./output/rustdesk.exe
+          name: rustdesk-windows
+          path: ./flutter/build/windows/x64/runner/Release/
