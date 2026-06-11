@@ -14,12 +14,15 @@ jobs:
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
+          vcpkgDirectory: C:\vcpkg
           vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
       
       - name: Install vcpkg dependencies
         run: |
-          $VCPKG_ROOT/vcpkg install --triplet x64-windows-static
-        shell: bash
+          cd C:\vcpkg
+          ./vcpkg install opus:x64-windows-static --recurse
+          ./vcpkg install --triplet x64-windows-static --recurse
+        shell: cmd
       
       - name: Install flutter
         uses: subosito/flutter-action@v2
