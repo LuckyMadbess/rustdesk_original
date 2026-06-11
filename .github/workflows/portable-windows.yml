@@ -18,20 +18,13 @@ jobs:
           vcpkgGitCommitId: "120deac3062162151622ca4860575a33844ba10b"
           runVcpkgInstall: false
       
-      - name: Install opus
-        run: C:\vcpkg\vcpkg install opus:x64-windows-static --recurse --classic
-        shell: cmd
-      
-      - name: Install libvpx (for scrap)
-        run: C:\vcpkg\vcpkg install libvpx:x64-windows-static --recurse --classic
-        shell: cmd
-      
-      - name: Install libyuv (for scrap)
-        run: C:\vcpkg\vcpkg install libyuv:x64-windows-static --recurse --classic
-        shell: cmd
-      
-      - name: Install ffmpeg
-        run: C:\vcpkg\vcpkg install ffmpeg:x64-windows-static --recurse --classic
+      - name: Install vcpkg dependencies
+        run: |
+          C:\vcpkg\vcpkg install opus:x64-windows-static --recurse --classic
+          C:\vcpkg\vcpkg install libvpx:x64-windows-static --recurse --classic
+          C:\vcpkg\vcpkg install libyuv:x64-windows-static --recurse --classic
+          C:\vcpkg\vcpkg install aom:x64-windows-static --recurse --classic
+          C:\vcpkg\vcpkg install ffmpeg:x64-windows-static --recurse --classic
         shell: cmd
       
       - uses: subosito/flutter-action@v2
@@ -43,6 +36,7 @@ jobs:
         with:
           toolchain: '1.75'
           targets: x86_64-pc-windows-msvc
+          components: rustfmt
       
       - name: Build
         run: python build.py --flutter --portable
