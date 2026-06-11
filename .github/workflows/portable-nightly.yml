@@ -1,0 +1,52 @@
+name: Portable Nightly Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-flutter-nightly-build:
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+    with:
+      upload-artifact: true
+      upload-tag: "nightly"
+  
+  extract-portable:
+    needs: run-flutter-nightly-build
+    runs-on: windows-2022
+    steps:
+      - name: Download original artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: rustdesk-unsigned-windows-x86_64
+          path: ./original-build
+      
+      - name: Download portable packer from build cache
+        uses: actions/download-artifact@v4
+        with:
+          name: rustdesk-unsigned-windows-x86_64
+          path: ./target/release/
+      
+      - name: Find and copy portable EXE
+        shell: bash
+        run: |
+          # Ищем rustdesk-portable-packer.exe
+          find . -name "rustdesk-portable-packer.exe" 2>/dev/null
+          
+          # Если нашли, копируем
+          if [ -f "./target/release/rustdesk-portable-packer.exe" ]; then
+            cp ./target/release/rustdesk-portable-packer.exe ./portable.exe
+            echo "Portable EXE found!"
+          elif [ -f "./original-build/rustdesk-portable-packer.exe" ]; then
+            cp ./original-build/rustdesk-portable-packer.exe ./portable.exe
+            echo "Portable EXE found in original-build!"
+          else
+            echo "Portable EXE not found, creating fallback"
+            cp ./original-build/rustdesk.exe ./portable.exe
+          fi
+      
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: rustdesk-portable
+          path: ./portable.exe
