@@ -1,4 +1,4 @@
-name: Windows Build with all deps
+name: Windows Build
 
 on:
   workflow_dispatch:
@@ -20,11 +20,7 @@ jobs:
       
       - name: Install vcpkg dependencies
         run: |
-          C:\vcpkg\vcpkg install opus:x64-windows-static --recurse --classic
-          C:\vcpkg\vcpkg install libvpx:x64-windows-static --recurse --classic
-          C:\vcpkg\vcpkg install libyuv:x64-windows-static --recurse --classic
-          C:\vcpkg\vcpkg install aom:x64-windows-static --recurse --classic
-          C:\vcpkg\vcpkg install ffmpeg:x64-windows-static --recurse --classic
+          C:\vcpkg\vcpkg install opus:x64-windows-static libvpx:x64-windows-static libyuv:x64-windows-static aom:x64-windows-static --recurse --classic
         shell: cmd
       
       - uses: subosito/flutter-action@v2
@@ -36,7 +32,7 @@ jobs:
         with:
           toolchain: '1.75'
           targets: x86_64-pc-windows-msvc
-          components: rustfmt
+          components: rustfmt, clippy
       
       - name: Build
         run: python build.py --flutter --portable
