@@ -19,9 +19,8 @@ jobs:
       
       - name: Install vcpkg dependencies
         run: |
-          cd C:\vcpkg
-          ./vcpkg install opus:x64-windows-static --recurse
-          ./vcpkg install --triplet x64-windows-static --recurse
+          C:\vcpkg\vcpkg install opus:x64-windows-static --recurse
+          C:\vcpkg\vcpkg install --triplet x64-windows-static --recurse
         shell: cmd
       
       - name: Install flutter
